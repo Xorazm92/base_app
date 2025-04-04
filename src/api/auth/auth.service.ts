@@ -1,8 +1,9 @@
+
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { UserService } from '../user/user.service';
-import { SignupDto, LoginDto } from '../../common/dto/auth.dto';
+import { SignupDto, LoginDto, RegisterDto, UpdatePasswordDto, UpdateProfileDto } from '../../common/dto/auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -41,39 +42,6 @@ export class AuthService {
     };
   }
 
-  async updatePassword(updatePasswordDto: UpdatePasswordDto, currentUser: any) {
-    const hashedPassword = await bcrypt.hash(updatePasswordDto.new_password, 10);
-    
-    await this.userService.update(currentUser.id, {
-      password_hash: hashedPassword
-    });
-
-    return {
-      message: 'Parol muvaffaqiyatli yangilandi'
-    };
-  }
-
-  async updateProfile(updateProfileDto: UpdateProfileDto, currentUser: any) {
-    await this.userService.update(currentUser.id, updateProfileDto);
-
-    return {
-      message: 'Profil muvaffaqiyatli yangilandi'
-    };
-  }
-    const hashedPassword = await bcrypt.hash(signupDto.password, 10);
-
-    const user = await this.userService.create({
-      full_name: signupDto.full_name,
-      email: signupDto.email,
-      password_hash: hashedPassword,
-      role_id: 2 // Regular user role
-    });
-
-    return {
-      message: 'Foydalanuvchi muvaffaqiyatli yaratildi'
-    };
-  }
-
   async login(loginDto: LoginDto) {
     const user = await this.userService.findByEmail(loginDto.email);
 
@@ -94,6 +62,26 @@ export class AuthService {
     };
   }
 
+  async updatePassword(updatePasswordDto: UpdatePasswordDto, currentUser: any) {
+    const hashedPassword = await bcrypt.hash(updatePasswordDto.new_password, 10);
+    
+    await this.userService.update(currentUser.id, {
+      password_hash: hashedPassword
+    });
+
+    return {
+      message: 'Parol muvaffaqiyatli yangilandi'
+    };
+  }
+
+  async updateProfile(updateProfileDto: UpdateProfileDto, currentUser: any) {
+    await this.userService.update(currentUser.id, updateProfileDto);
+
+    return {
+      message: 'Profil muvaffaqiyatli yangilandi'
+    };
+  }
+
   private async generateTokens(user: any) {
     const payload = { email: user.email, sub: user.id, role: user.role_id };
 
@@ -106,7 +94,7 @@ export class AuthService {
   async refreshToken(refreshToken: string) {
     try {
       const decoded = this.jwtService.verify(refreshToken);
-      const user = await this.userService.findOne(decoded.sub);
+      const user = await this.userService.findOneBy({ id: decoded.sub });
 
       if (!user || user.refresh_token !== refreshToken) {
         throw new UnauthorizedException('Yaroqsiz refresh token');
