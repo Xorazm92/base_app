@@ -1,0 +1,88 @@
+[3:18:45 AM] Starting compilation in watch mode...
+
+src/api/auth/auth.controller.ts:3:20 - error TS2305: Module '"../../common/dto/auth.dto"' has no exported member 'RegisterDto'.
+
+3 import { LoginDto, RegisterDto, UpdatePasswordDto, UpdateProfileDto } from '../../common/dto/auth.dto';
+                     ~~~~~~~~~~~
+
+src/api/auth/auth.controller.ts:20:29 - error TS2339: Property 'register' does not exist on type 'AuthService'.
+
+20     return this.authService.register(registerDto, req.user);
+                               ~~~~~~~~
+
+src/api/auth/auth.controller.ts:26:29 - error TS2339: Property 'updatePassword' does not exist on type 'AuthService'.
+
+26     return this.authService.updatePassword(updatePasswordDto, req.user);
+                               ~~~~~~~~~~~~~~
+
+src/api/auth/auth.controller.ts:32:29 - error TS2339: Property 'updateProfile' does not exist on type 'AuthService'.
+
+32     return this.authService.updateProfile(updateProfileDto, req.user);
+                               ~~~~~~~~~~~~~
+
+src/api/auth/auth.service.ts:18:7 - error TS2353: Object literal may only specify known properties, and 'full_name' does not exist in type 'SigninDto'.
+
+18       full_name: signupDto.full_name,
+         ~~~~~~~~~
+
+src/api/auth/auth.service.ts:30:41 - error TS2339: Property 'findByEmail' does not exist on type 'UserService'.
+
+30     const user = await this.userService.findByEmail(loginDto.email);
+                                           ~~~~~~~~~~~
+
+src/api/auth/auth.service.ts:39:7 - error TS2353: Object literal may only specify known properties, and 'refresh_token' does not exist in type 'Partial<SigninDto>'.
+
+39       refresh_token: tokens.refresh_token,
+         ~~~~~~~~~~~~~
+
+src/api/auth/auth.service.ts:61:43 - error TS2551: Property 'findOne' does not exist on type 'UserService'. Did you mean 'findOneBy'?
+
+61       const user = await this.userService.findOne(decoded.sub);
+                                             ~~~~~~~
+
+  src/infrastructure/lib/baseService/index.ts:44:9
+    44   async findOneBy(options: IFindOptions<Entity>) {
+               ~~~~~~~~~
+    'findOneBy' is declared here.
+
+src/api/auth/auth.service.ts:74:35 - error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+
+74     await this.userService.update(userId, {
+                                     ~~~~~~
+
+src/api/command/command.module.ts:2:32 - error TS2307: Cannot find module './command.service' or its corresponding type declarations.
+
+2 import { CommandService } from './command.service';
+                                 ~~~~~~~~~~~~~~~~~~~
+
+src/api/command/command.module.ts:3:35 - error TS2307: Cannot find module './command.controller' or its corresponding type declarations.
+
+3 import { CommandController } from './command.controller';
+                                    ~~~~~~~~~~~~~~~~~~~~~~
+
+src/common/dto/auth.dto.ts:33:4 - error TS2304: Cannot find name 'IsNotEmpty'.
+
+33   @IsNotEmpty()
+      ~~~~~~~~~~
+
+src/common/dto/auth.dto.ts:38:4 - error TS2304: Cannot find name 'IsOptional'.
+
+38   @IsOptional()
+      ~~~~~~~~~~
+
+src/common/dto/auth.dto.ts:43:4 - error TS2304: Cannot find name 'IsOptional'.
+
+43   @IsOptional()
+      ~~~~~~~~~~
+
+src/common/dto/auth.dto.ts:47:4 - error TS2304: Cannot find name 'IsOptional'.
+
+47   @IsOptional()
+      ~~~~~~~~~~
+
+src/common/dto/auth.dto.ts:51:4 - error TS2304: Cannot find name 'IsOptional'.
+
+51   @IsOptional()
+      ~~~~~~~~~~
+
+[3:18:54 AM] Found 16 errors. Watching for file changes.
