@@ -26,6 +26,54 @@ export class AuthService {
     };
   }
 
+  async register(registerDto: RegisterDto, currentUser: any) {
+    const hashedPassword = await bcrypt.hash(registerDto.password, 10);
+
+    const user = await this.userService.create({
+      full_name: registerDto.full_name,
+      email: registerDto.email,
+      password_hash: hashedPassword,
+      role_id: 2
+    });
+
+    return {
+      message: 'Foydalanuvchi muvaffaqiyatli ro\'yxatdan o\'tdi'
+    };
+  }
+
+  async updatePassword(updatePasswordDto: UpdatePasswordDto, currentUser: any) {
+    const hashedPassword = await bcrypt.hash(updatePasswordDto.new_password, 10);
+    
+    await this.userService.update(currentUser.id, {
+      password_hash: hashedPassword
+    });
+
+    return {
+      message: 'Parol muvaffaqiyatli yangilandi'
+    };
+  }
+
+  async updateProfile(updateProfileDto: UpdateProfileDto, currentUser: any) {
+    await this.userService.update(currentUser.id, updateProfileDto);
+
+    return {
+      message: 'Profil muvaffaqiyatli yangilandi'
+    };
+  }
+    const hashedPassword = await bcrypt.hash(signupDto.password, 10);
+
+    const user = await this.userService.create({
+      full_name: signupDto.full_name,
+      email: signupDto.email,
+      password_hash: hashedPassword,
+      role_id: 2 // Regular user role
+    });
+
+    return {
+      message: 'Foydalanuvchi muvaffaqiyatli yaratildi'
+    };
+  }
+
   async login(loginDto: LoginDto) {
     const user = await this.userService.findByEmail(loginDto.email);
 
