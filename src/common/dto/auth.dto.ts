@@ -1,41 +1,32 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsString, MinLength } from 'class-validator';
 import { UserRole } from '../enum/user-role.enum';
 
-export class LoginDto {
-  @IsNotEmpty()
-  @IsString()
-  username: string;
-
-  @IsNotEmpty()
-  @IsString()
-  @MinLength(6)
-  password: string;
-}
-
-export class RegisterDto {
-  @IsNotEmpty()
-  @IsString()
-  username: string;
-
-  @IsNotEmpty()
-  @IsEmail()
-  email: string;
-
-  @IsNotEmpty()
+export class SignupDto {
   @IsString()
   full_name: string;
 
-  @IsNotEmpty()
+  @IsEmail()
+  email: string;
+
   @IsString()
   @MinLength(6)
   password: string;
+}
 
-  @IsOptional()
-  role?: UserRole = UserRole.ADMIN;
+export class LoginDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  password: string;
+}
+
+export class TokenDto {
+  @IsString()
+  refresh_token: string;
 }
 
 export class UpdatePasswordDto {
-  @IsOptional()
   @IsString()
   old_password?: string;
 

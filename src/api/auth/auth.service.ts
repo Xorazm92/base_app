@@ -1,137 +1,83 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { Knex } from 'knex';
-import { InjectConnection } from 'nest-knexjs';
-import { LoginDto, RegisterDto, UpdatePasswordDto, UpdateProfileDto } from '../../common/dto/auth.dto';
-import { UserRole } from '../../common/enum/user-role.enum';
+import { UserService } from '../user/user.service';
+import { SignupDto, LoginDto } from '../../common/dto/auth.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectConnection() private readonly knex: Knex,
+    private readonly userService: UserService,
     private readonly jwtService: JwtService,
   ) {}
 
-  async login(loginDto: LoginDto) {
-    const user = await this.knex('users')
-      .where('username', loginDto.username)
-      .andWhere('is_active', true)
-      .first();
+  async signup(signupDto: SignupDto) {
+    const hashedPassword = await bcrypt.hash(signupDto.password, 10);
 
-    if (!user || !(await bcrypt.compare(loginDto.password, user.password))) {
-      throw new UnauthorizedException('Foydalanuvchi ismi yoki parol noto\'g\'ri');
-    }
-
-    // Update last login
-    await this.knex('users')
-      .where('id', user.id)
-      .update({
-        last_login: this.knex.fn.now(),
-      });
-
-    const payload = {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-    };
-
-    return {
-      holat: 'muvaffaqiyat',
-      kalit: this.jwtService.sign(payload),
-    };
-  }
-
-  async register(registerDto: RegisterDto, currentUser: { role: string }) {
-    if (currentUser.role !== UserRole.SUPERADMIN) {
-      throw new UnauthorizedException('Faqat superadmin yangi foydalanuvchi qo\'sha oladi');
-    }
-
-    const exists = await this.knex('users')
-      .where('username', registerDto.username)
-      .orWhere('email', registerDto.email)
-      .first();
-
-    if (exists) {
-      throw new ConflictException('Bu foydalanuvchi ismi yoki email allaqachon band');
-    }
-
-    const hashedPassword = await bcrypt.hash(registerDto.password, 10);
-
-    await this.knex('users').insert({
-      ...registerDto,
-      password: hashedPassword,
-      role: registerDto.role || UserRole.ADMIN,
+    const user = await this.userService.create({
+      full_name: signupDto.full_name,
+      email: signupDto.email,
+      password_hash: hashedPassword,
+      role_id: 2 // Regular user role
     });
 
     return {
-      holat: 'muvaffaqiyat',
-      xabar: 'Foydalanuvchi muvaffaqiyatli ro\'yxatdan o\'tdi.',
+      message: 'Foydalanuvchi muvaffaqiyatli yaratildi'
     };
   }
 
-  async updatePassword(dto: UpdatePasswordDto, currentUser: { id: number; role: string }) {
-    const user = await this.knex('users')
-      .where('id', dto.user_id || currentUser.id)
-      .first();
+  async login(loginDto: LoginDto) {
+    const user = await this.userService.findByEmail(loginDto.email);
 
-    if (!user) {
-      throw new UnauthorizedException('Foydalanuvchi topilmadi');
+    if (!user || !(await bcrypt.compare(loginDto.password, user.password_hash))) {
+      throw new UnauthorizedException('Email yoki parol noto\'g\'ri');
     }
 
-    // Superadmin boshqa foydalanuvchilar parolini o'zgartirmoqchi bo'lsa
-    if (dto.user_id && currentUser.role !== UserRole.SUPERADMIN) {
-      throw new UnauthorizedException('Faqat superadminlar boshqalarning parolini yangilay oladi');
-    }
+    const tokens = await this.generateTokens(user);
 
-    // O'z parolini o'zgartirmoqchi bo'lsa
-    if (!dto.user_id && dto.old_password) {
-      const isValidPassword = await bcrypt.compare(dto.old_password, user.password);
-      if (!isValidPassword) {
-        throw new UnauthorizedException('Joriy parol noto\'g\'ri');
-      }
-    }
-
-    const hashedPassword = await bcrypt.hash(dto.new_password, 10);
-
-    await this.knex('users')
-      .where('id', user.id)
-      .update({
-        password: hashedPassword,
-        updated_at: this.knex.fn.now(),
-      });
+    await this.userService.update(user.id, {
+      refresh_token: tokens.refresh_token,
+      refresh_token_expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    });
 
     return {
-      holat: 'muvaffaqiyat',
-      xabar: 'Parol muvaffaqiyatli yangilandi.',
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token
     };
   }
 
-  async updateProfile(dto: UpdateProfileDto, currentUser: { id: number }) {
-    if (dto.username || dto.email) {
-      const exists = await this.knex('users')
-        .where(function() {
-          if (dto.username) this.orWhere('username', dto.username);
-          if (dto.email) this.orWhere('email', dto.email);
-        })
-        .whereNot('id', currentUser.id)
-        .first();
-
-      if (exists) {
-        throw new ConflictException('Bu foydalanuvchi ismi yoki email allaqachon band');
-      }
-    }
-
-    await this.knex('users')
-      .where('id', currentUser.id)
-      .update({
-        ...dto,
-        updated_at: this.knex.fn.now(),
-      });
+  private async generateTokens(user: any) {
+    const payload = { email: user.email, sub: user.id, role: user.role_id };
 
     return {
-      holat: 'muvaffaqiyat',
-      xabar: 'Profil muvaffaqiyatli yangilandi',
+      access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
+      refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' })
+    };
+  }
+
+  async refreshToken(refreshToken: string) {
+    try {
+      const decoded = this.jwtService.verify(refreshToken);
+      const user = await this.userService.findOne(decoded.sub);
+
+      if (!user || user.refresh_token !== refreshToken) {
+        throw new UnauthorizedException('Yaroqsiz refresh token');
+      }
+
+      return this.generateTokens(user);
+    } catch {
+      throw new UnauthorizedException('Yaroqsiz refresh token');
+    }
+  }
+
+  async logout(userId: number) {
+    await this.userService.update(userId, {
+      refresh_token: null,
+      refresh_token_expires: null
+    });
+
+    return {
+      message: 'Muvaffaqiyatli chiqish'
     };
   }
 }
