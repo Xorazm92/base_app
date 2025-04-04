@@ -15,4 +15,6 @@ export class SigninDto {
   password_hash?: string;
   refresh_token?: string;
   refresh_token_expires?: Date;
+  role_id?: number;
+  phone_number?: string;
 }
