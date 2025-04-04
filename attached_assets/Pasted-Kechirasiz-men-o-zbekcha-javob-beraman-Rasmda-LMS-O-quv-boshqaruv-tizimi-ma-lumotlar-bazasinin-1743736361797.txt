@@ -1,0 +1,109 @@
+Kechirasiz, men o'zbekcha javob beraman. 
+
+Rasmda LMS (O'quv boshqaruv tizimi) ma'lumotlar bazasining ER-diagrammasi ko'rsatilgan. Keling, uni tahlil qilib chiqaylik:
+
+## Ma'lumotlar bazasi strukturasi tahlili
+
+Baza quyidagi asosiy jadvallardan iborat:
+
+1. **public.user**
+   - Foydalanuvchi ma'lumotlarini saqlaydi (user_id, full_name, email, password_hash)
+   - lms.roles jadvali bilan role_id orqali bog'langan
+   - created_at vaqt belgisi mavjud
+
+2. **lms.roles**
+   - Foydalanuvchi rollarini belgilaydi (role_id, role_name, level)
+
+3. **lms.groups**
+   - Guruhlar/sinflar ma'lumotlari (group_id, name, description, created_at)
+
+4. **lms.group_members**
+   - Foydalanuvchilarni guruhlarga bog'lovchi jadval
+   - Ma'lum guruhda foydalanuvchining rolini ko'rsatuvchi role_in_group maydoni bor
+
+5. **lms.lessons**
+   - Darslar ma'lumotlari (lesson_id, group_id, topic, lesson_datetime)
+   - recording_path va created_at maydonlari mavjud
+
+6. **lms.attendance**
+   - Darslarda qatnashish ma'lumotlarini saqlaydi
+   - O'quvchi va dars orasidagi bog'lanish (lesson_id, student_id)
+   - status, remarks maydonlari bor
+
+7. **lms.assignments**
+   - Topshiriqlar ma'lumotlari (assignment_id, lesson_id, title, description)
+   - due_date va created_at maydonlari bor
+
+8. **lms.submissions**
+   - Topshiriqlarni topshirish ma'lumotlari
+   - assignment_id va student_id orqali bog'langan
+   - file_path, grade, graded_by, graded_at, feedback kabi maydonlar bor
+
+## Kamchiliklar va takomillashtirish mumkin bo'lgan joylar
+
+1. **Xavfsizlik bilan bog'liq kamchiliklar:**
+   - Foydalanuvchi parollarini saqlash uchun password_hash ishlatilgan, lekin salt maydonlari ko'rinmaydi
+   - Tokenlar yoki sessiyalar saqlanadigan jadval yo'q
+
+2. **Ma'lumotlar tuzilishi bilan bog'liq kamchiliklar:**
+   - student_id va user_id orasida aniq bog'lanish yo'q
+   - Fayllarni yuklash va saqlash logikasi aniq emas
+
+3. **Takomillashtirish uchun tavsiyalar:**
+   - Foydalanuvchi autentifikatsiyasi uchun alohida jadval qo'shish
+   - Fayl yuklash va saqlash uchun qo'shimcha jadval yaratish
+   - Ko'proq metama'lumot (metadata) qo'shish
+
+## Autentifikatsiya tizimini qanday yaratish kerak
+
+Autentifikatsiya tizimini quyidagi jadvallarga e'tibor bergan holda yaratish mumkin:
+
+```sql
+CREATE TABLE auth.sessions (
+    session_id UUID PRIMARY KEY,
+    user_id INT REFERENCES public.user(user_id),
+    token VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    last_activity TIMESTAMP,
+    ip_address VARCHAR(45),
+    user_agent TEXT
+);
+
+CREATE TABLE auth.password_reset (
+    reset_id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES public.user(user_id),
+    token VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE
+);
+```
+
+Autentifikatsiya tizimini yaratishda e'tibor berish kerak bo'lgan jihatlar:
+
+1. **Xavfsiz parol saqlash:**
+   - Argon2 yoki bcrypt kabi zamonaviy hash algoritmlari ishlatish
+   - Salt va pepper qo'llash
+
+2. **Tokenlar boshqaruvi:**
+   - JWT tokenlar uchun secrets saqlash
+   - Token yangilash mexanizmini yaratish
+   - Token muddati tugashi (expiration) bilan ishlash
+
+3. **Ro'yxatdan o'tish jarayoni:**
+   - Email tasdiqlash
+   - Captcha qo'shish
+   - Parol kuchliligini tekshirish
+
+4. **Kirish va chiqish jarayoni:**
+   - Muvaffaqiyatsiz urinishlarni cheklash
+   - Ikki faktorli autentifikatsiya qo'shish
+   - Bir vaqtning o'zida bir nechta qurilmada ishlashni boshqarish
+
+5. **Xavfsizlik qatlamlari:**
+   - CSRF himoyasi
+   - XSS himoyasi
+   - SQL injection himoyasi
+
+Bu tizimni PostgreSQL, Redis kabi texnologiyalar bilan birgalikda ishlatish mumkin, ayniqsa sessiyalar va tokenlarni boshqarish uchun.
