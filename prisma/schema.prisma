@@ -1,0 +1,110 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id        Int         @id @default(autoincrement())
+  roleName  String      @map("role_name")
+  level     Int?
+  users     PublicUser[]
+
+  @@map("lms_roles")
+}
+
+model PublicUser {
+  id           Int           @id @default(autoincrement())
+  fullName     String        @map("full_name")
+  email        String?       @unique
+  passwordHash String?       @map("password_hash")
+  roleId       Int          @map("role_id")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  role         Role         @relation(fields: [roleId], references: [id])
+  groupMembers GroupMember[]
+  attendance   Attendance[]
+  submissions  Submission[]
+
+  @@map("public_user")
+}
+
+model Group {
+  id          Int           @id @default(autoincrement())
+  name        String        @unique
+  description String?       @db.Text
+  createdAt   DateTime     @default(now()) @map("created_at")
+  members     GroupMember[]
+  lessons     Lesson[]
+
+  @@map("lms_groups")
+}
+
+model GroupMember {
+  id        Int        @id @default(autoincrement())
+  groupId   Int        @map("group_id")
+  userId    Int        @map("user_id")
+  roleInGroup String   @map("role_in_group")
+  group     Group      @relation(fields: [groupId], references: [id])
+  user      PublicUser @relation(fields: [userId], references: [id])
+
+  @@map("lms_group_members")
+}
+
+model Lesson {
+  id             Int           @id @default(autoincrement())
+  groupId        Int          @map("group_id")
+  topic         String        @db.VarChar(255)
+  lessonDatetime DateTime     @map("lesson_datetime")
+  recordingPath  String?      @map("recording_path")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  group          Group        @relation(fields: [groupId], references: [id])
+  attendance     Attendance[]
+  assignments    Assignment[]
+
+  @@map("lms_lessons")
+}
+
+model Attendance {
+  id         Int        @id @default(autoincrement())
+  lessonId   Int       @map("lesson_id")
+  studentId  Int       @map("student_id")
+  status     String    @db.VarChar(20)
+  remarks    String?   @db.Text
+  lesson     Lesson    @relation(fields: [lessonId], references: [id])
+  student    PublicUser @relation(fields: [studentId], references: [id])
+
+  @@map("lms_attendance")
+}
+
+model Assignment {
+  id          Int           @id @default(autoincrement())
+  lessonId    Int          @map("lesson_id")
+  title       String       @db.VarChar(255)
+  description String?      @db.Text
+  dueDate     DateTime     @map("due_date")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  lesson      Lesson       @relation(fields: [lessonId], references: [id])
+  submissions Submission[]
+
+  @@map("lms_assignments")
+}
+
+model Submission {
+  id            Int         @id @default(autoincrement())
+  assignmentId  Int        @map("assignment_id")
+  studentId     Int        @map("student_id")
+  submittedAt   DateTime   @default(now()) @map("submitted_at")
+  filePath      String     @map("file_path")
+  grade         String?    @db.VarChar(10)
+  gradedBy      Int?       @map("graded_by")
+  gradedAt      DateTime?  @map("graded_at")
+  feedback      String?    @db.Text
+  assignment    Assignment @relation(fields: [assignmentId], references: [id])
+  student       PublicUser @relation(fields: [studentId], references: [id])
+
+  @@map("lms_submissions")
+}
