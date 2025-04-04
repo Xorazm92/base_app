@@ -361,6 +361,11 @@ export class UserService extends BaseService<
     }
     return user;
   }
+  async findByEmail(email: string) {
+    return this.getRepository.findOne({
+      where: { email }
+    });
+  }
 
   private async generateTokens(payload: object) {
     try {

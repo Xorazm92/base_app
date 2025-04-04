@@ -94,9 +94,9 @@ export class AuthService {
   async refreshToken(refreshToken: string) {
     try {
       const decoded = this.jwtService.verify(refreshToken);
-      const user = await this.userService.findOneBy({ id: decoded.sub });
+      const user = await this.userService.findOne(decoded.sub);
 
-      if (!user || user.refresh_token !== refreshToken) {
+      if (!user || !user.data || user.data.refresh_token !== refreshToken) {
         throw new UnauthorizedException('Yaroqsiz refresh token');
       }
 

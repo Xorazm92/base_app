@@ -1,12 +1,18 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsPhoneNumber } from 'src/common/decorator/is-phone-number';
+
+import { IsString, IsEmail, MinLength } from 'class-validator';
 
 export class SigninDto {
-  @ApiProperty({
-    type: String,
-    description: 'Phone number of user',
-    example: '+998901234567',
-  })
-  @IsPhoneNumber()
-  phone_number: string;
+  @IsString()
+  full_name: string;
+
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  @MinLength(6)
+  password: string;
+
+  password_hash?: string;
+  refresh_token?: string;
+  refresh_token_expires?: Date;
 }
